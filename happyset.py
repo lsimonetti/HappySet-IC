@@ -84,23 +84,60 @@ def resolve_modelo(m1,m2,vertices,arestas,k):
         senses=['G'] * vertices,
         rhs=[-len(m2[i]) for i in range(vertices)])
 
-    
+    # CPLEX PARAMETERS
+    # Number of Theads - Sequential; single threaded
     cpx.parameters.threads.set(1)
+
+    #MIP emphasis switch
+    cpx.parameters.emphasis.mip.set(CPX_MIPEMPHASIS_BALANCED)
+
+    #MIP heuristic effort - Desligando a heuristica do Cplex
+    cpx.parameters.mip.strategy.heuristiceffort.set(0)
+    #MIP heuristic frequency - Desligando heuristica do Cplex
+    cpx.parameters.mip.strategy.heuristicfreq.set(-1)
+
+    #Presolve switch - Do not apply presolve
+    cpx.parameters.preprocessing.presolve.set(0) 
+    #Relaxed LP presolve switch - do not use presolve on initial relaxation
+    cpx.parameters.preprocessing.relax.set(0)
+    #Node presolve switch - No node presolve
+    cpx.parameters.mip.strategy.presolvenode.set(-1)
+
+    #Number of cutting plane passes - Turning off
+    cpx.parameters.mip.limits.cutpasses.set(-1)
+
+    #Clock type for computation time - CPU time
+    cpx.parameters.clocktype.set(1)
     # limite de tempo de clock ~1h processamento CPU
+    cpx.parameters.timelimit.set(3600)
+    
     cpx.objective.set_sense(cpx.objective.sense.maximize)
     
     cpx.write('model.lp')
+
+    time_cplex = cpx.get_time()
     # begin time meu
     cpx.solve()
+    time_cplex = cpx.get_time() - time_cplex
+    print('Cplex Time:                     %f' %
+          time_cplex)
     # end time meu
     print(cpx.solution)
     # limtie inf, sup. inf == sup => otimo
-    print('Solution status:                   %d' % cpx.solution.get_status())
+    print('Solution status:                   %d' % cpx.solution.get_status()) # Solution status codes: https://www.ibm.com/docs/api/v1/content/SSSA5P_22.1.1/ilog.odms.cplex.help/refpythoncplex/html/cplex._internal._subinterfaces.SolutionStatus-class.html
     # se não otimo => best bound, best solution
     print('Nodes processed:                   %d' %
           cpx.solution.progress.get_num_nodes_processed())
-    print('Active user cuts/lazy constraints: %d' %
-          cpx.solution.MIP.get_num_cuts(cpx.solution.MIP.cut_type.user))
+    print('Nodes remaining:                   %d' %
+          cpx.solution.progress.get_num_nodes_remaining())    
+    print('Node number of the best solution found:                   %d' %
+          cpx.solution.MIP.get_incumbent_node())   
+    print('Best known bound:                     %f' %
+          cpx.solution.MIP.get_best_objective())    
+    print('MIP relative gap:                     %f' %
+          cpx.solution.MIP.get_mip_relative_gap())
+    #print('Active user cuts/lazy constraints: %d' %
+    #      cpx.solution.MIP.get_num_cuts(cpx.solution.MIP.cut_type.user))
     tol = cpx.parameters.mip.tolerances.integrality.get()
     print('Optimal value:                     %f' %
           cpx.solution.get_objective_value())
